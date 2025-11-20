@@ -1,0 +1,65 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Tipos de usuário
+enum Role {
+  ADMIN
+  PACIENTE
+  PROFISSIONAL
+}
+
+model User {
+  id        String   @id @default(uuid())
+  nome      String
+  email     String   @unique
+  senha     String
+  tipo      Role     @default(PACIENTE)
+  telefone  String?
+  criadoEm  DateTime @default(now())
+
+  // Relacionamentos
+  perfilProfissional Profissional?
+  vagasCriadas       Vaga[]        @relation("PacienteVagas")
+  candidaturas       Candidatura[]
+}
+
+model Profissional {
+  id            String  @id @default(uuid())
+  userId        String  @unique
+  registroCoren String? // Ex: Registro profissional
+  especialidade String? // Ex: Cuidador, Enfermeiro
+  aprovado      Boolean @default(false) // Só trabalha se o admin aprovar
+  
+  user          User    @relation(fields: [userId], references: [id])
+}
+
+model Vaga {
+  id          String   @id @default(uuid())
+  titulo      String   // Ex: Plantão Noturno Idoso
+  descricao   String
+  valor       Decimal
+  local       String
+  dataHora    DateTime
+  status      String   @default("ABERTA") // ABERTA, FINALIZADA
+  
+  pacienteId  String
+  paciente    User     @relation("PacienteVagas", fields: [pacienteId], references: [id])
+  
+  candidatos  Candidatura[]
+}
+
+model Candidatura {
+  id        String   @id @default(uuid())
+  vagaId    String
+  userId    String   // Profissional que se candidatou
+  status    String   @default("PENDENTE") // PENDENTE, ACEITO, RECUSADO
+
+  vaga      Vaga     @relation(fields: [vagaId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
+}
